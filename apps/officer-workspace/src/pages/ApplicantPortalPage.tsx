@@ -221,7 +221,7 @@ export function ApplicantPortalPage() {
               {authMode === 'register' && <Input label="Nama penuh" value={fullName} onChange={(event) => setFullName(event.target.value)} required />}
               <Input label="Alamat e-mel" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
               <Input label="Kata laluan" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
-              {authMode === 'login' && <div className="flex justify-end -mt-2"><a href="#" onClick={(event) => event.preventDefault()} className="text-xs font-medium text-[#8B7CF8] hover:underline">Lupa kata laluan?</a></div>}
+              {authMode === 'login' && <div className="flex justify-end -mt-2"><p className="text-xs text-slate-500 dark:text-slate-400">Lupa kata laluan? Sila hubungi cawangan MARA berdekatan.</p></div>}
               <Button type="submit" variant="primary" className="w-full justify-center" disabled={authLoading}>{authLoading ? 'Memproses...' : authMode === 'login' ? 'Log masuk' : 'Daftar akaun'}</Button>
             </form>
             <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="mt-4 text-sm font-medium text-[#8B7CF8] hover:text-[#A89BFB] hover:underline">{authMode === 'login' ? 'Belum mempunyai akaun? Daftar' : 'Sudah mempunyai akaun? Log masuk'}</button>
