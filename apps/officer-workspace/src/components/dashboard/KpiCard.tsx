@@ -6,7 +6,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '../ui/Card';
 
-type KpiVariant = 'primary' | 'success' | 'danger' | 'purple';
+type KpiVariant = 'primary' | 'success' | 'warning' | 'danger' | 'purple';
 
 interface KpiCardProps {
   /** Slot for a 32px icon: <svg stroke-width 1.9 …>. Inherits currentColor. */
