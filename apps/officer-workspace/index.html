@@ -8,6 +8,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Set data-theme before paint: dark when OS prefers dark, light otherwise. -->
+    <script>
+      (function () {
+        document.documentElement.setAttribute(
+          'data-theme',
+          window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+        );
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
