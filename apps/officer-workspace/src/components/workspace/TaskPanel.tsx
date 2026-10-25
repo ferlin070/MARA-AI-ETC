@@ -119,7 +119,7 @@ function AssessmentListItem({
   );
 }
 
-export function TaskPanel() {
+function TaskPanelBody() {
   const { assessments } = useAssessments();
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
 
@@ -133,8 +133,63 @@ export function TaskPanel() {
   const activeCount = stages.filter((s) => s.status === 'in_progress').length;
   const awaitingGate = selected?.pending_gate ?? null;
 
+  const summaryChips = selected ? (
+    <div className="mt-2.5 flex flex-wrap gap-1.5">
+      {activeCount > 0 && (
+        <Chip color="aqua" variant="pill" className="border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-800/60 dark:bg-cyan-950/80 text-xs font-semibold dark:text-cyan-300">
+          {activeCount} {WORKSPACE.CHIP_ACTIVE_LABEL}
+        </Chip>
+      )}
+      {awaitingGate && (
+        <Chip color="primaryDark" variant="pill" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/80 text-xs font-semibold dark:text-amber-300">
+          Awaiting {awaitingGate.replace(/_/g, ' ')}
+        </Chip>
+      )}
+    </div>
+  ) : null;
+
+  const listSection =
+    assessments.length === 0 ? (
+      <div className="flex items-center justify-center px-4 py-12 text-center">
+        <Typography.Text fontSize="s" className="text-slate-400 dark:text-slate-500">
+          Start an assessment from the chat below to see agent progress here.
+        </Typography.Text>
+      </div>
+    ) : (
+      <Scrollable className="flex-1">
+        {/* Assessment selector — every case is listed and clickable */}
+        <div className="divide-y divide-slate-100 border-b border-slate-100 dark:divide-[#222328] dark:border-[#222328]">
+          {assessments.map((a) => (
+            <AssessmentListItem
+              key={a.thread_id}
+              assessment={a}
+              isActive={a.thread_id === selected?.thread_id}
+              onSelect={() => setSelectedThreadId(a.thread_id)}
+            />
+          ))}
+        </div>
+
+        {/* Stage log of the selected case */}
+        {stageCount > 0 && (
+          <div className="divide-y divide-slate-100 dark:divide-[#222328]">
+            {stages.map((entry, i) => (
+              <StageRow key={`${entry.stage}-${i}`} entry={entry} />
+            ))}
+          </div>
+        )}
+        {stageCount === 0 && (
+          <div className="px-4 py-8 text-center">
+            <Typography.Text fontSize="xxs" className="text-slate-400 dark:text-slate-500">
+              No stages recorded for this case yet.
+            </Typography.Text>
+          </div>
+        )}
+      </Scrollable>
+    );
+
   return (
-    <aside className="flex w-72 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-[#222328] dark:bg-[#131417]">
+    <>
+      {/* Panel header — shared by the desktop aside and the mobile drawer */}
       <div className="border-b border-slate-100 bg-slate-50/50 px-4 py-3.5 dark:border-[#222328] dark:bg-[#18191C]/50">
         <div className="flex items-center justify-between">
           <Typography.H5 className="font-bold text-slate-900 dark:text-white">
@@ -146,59 +201,85 @@ export function TaskPanel() {
             </span>
           )}
         </div>
-        {selected && (
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {activeCount > 0 && (
-              <Chip color="aqua" variant="pill" className="border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-800/60 dark:bg-cyan-950/80 text-xs font-semibold dark:text-cyan-300">
-                {activeCount} {WORKSPACE.CHIP_ACTIVE_LABEL}
-              </Chip>
-            )}
-            {awaitingGate && (
-              <Chip color="primaryDark" variant="pill" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/80 text-xs font-semibold dark:text-amber-300">
-                Awaiting {awaitingGate.replace(/_/g, ' ')}
-              </Chip>
-            )}
-          </div>
-        )}
+        {summaryChips}
       </div>
+      {listSection}
+    </>
+  );
+}
 
-      {assessments.length === 0 ? (
-        <div className="flex items-center justify-center px-4 py-12 text-center">
-          <Typography.Text fontSize="s" className="text-slate-400 dark:text-slate-500">
-            Start an assessment from the chat below to see agent progress here.
-          </Typography.Text>
-        </div>
-      ) : (
-        <Scrollable className="flex-1">
-          {/* Assessment selector — every case is listed and clickable */}
-          <div className="divide-y divide-slate-100 border-b border-slate-100 dark:divide-[#222328] dark:border-[#222328]">
-            {assessments.map((a) => (
-              <AssessmentListItem
-                key={a.thread_id}
-                assessment={a}
-                isActive={a.thread_id === selected?.thread_id}
-                onSelect={() => setSelectedThreadId(a.thread_id)}
-              />
-            ))}
-          </div>
+/**
+ * Responsive wrapper. On >=md the panel renders as a fixed sidebar column
+ * (WorkspacePage lays it out inline). On <md it collapses behind a floating
+ * toggle button and opens as a slide-over drawer with a backdrop.
+ */
+export function TaskPanel() {
+  const { assessments } = useAssessments();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-          {/* Stage log of the selected case */}
-          {stageCount > 0 && (
-            <div className="divide-y divide-slate-100 dark:divide-[#222328]">
-              {stages.map((entry, i) => (
-                <StageRow key={`${entry.stage}-${i}`} entry={entry} />
-              ))}
-            </div>
+  const activeCount = assessments.reduce(
+    (n, a) => n + a.stage_log.filter((s) => s.status === 'in_progress').length,
+    0,
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar panel */}
+      <aside className="hidden w-72 shrink-0 flex-col border-r border-slate-200 bg-white md:flex dark:border-[#222328] dark:bg-[#131417]">
+        <TaskPanelBody />
+      </aside>
+
+      {/* Mobile floating toggle */}
+      {assessments.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open task panel"
+          title="Open task panel"
+          className="fixed bottom-5 left-5 z-40 flex h-11 items-center gap-2 rounded-full bg-indigo-600 px-4 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 transition-colors hover:bg-indigo-500 md:hidden"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+          <span>{WORKSPACE.TASK_HEADING}</span>
+          {activeCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-cyan-500 px-1 text-xs font-bold">
+              {activeCount}
+            </span>
           )}
-          {stageCount === 0 && (
-            <div className="px-4 py-8 text-center">
-              <Typography.Text fontSize="xxs" className="text-slate-400 dark:text-slate-500">
-                No stages recorded for this case yet.
-              </Typography.Text>
-            </div>
-          )}
-        </Scrollable>
+        </button>
       )}
-    </aside>
+
+      {/* Mobile slide-over drawer */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-xs dark:bg-black/60"
+            onClick={() => setMobileOpen(false)}
+          />
+          <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85vw] flex-col border-r border-slate-200 bg-white shadow-xl dark:border-[#222328] dark:bg-[#131417]">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 pr-2 dark:border-[#222328] dark:bg-[#18191C]/50">
+              <span className="flex-1">
+                <Typography.H5 className="px-4 py-3.5 font-bold text-slate-900 dark:text-white">
+                  {WORKSPACE.TASK_HEADING}
+                </Typography.H5>
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                aria-label="Close task panel"
+                title="Close task panel"
+                className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#222328]"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <TaskPanelBody />
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
