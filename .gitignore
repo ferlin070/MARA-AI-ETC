@@ -264,3 +264,5 @@ runtime_*.tar
 test-results
 .sessions
 .eval_sessions
+.freebuff/
+.pr/

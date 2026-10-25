@@ -1,0 +1,27 @@
+chore(workspace): add dev-mode auth bypass for local testing
+
+Adds a development-only bypass in AuthGuard and LoginPage so that
+backend/deployment engineers can access the officer-workspace UI without
+a running Keycloak instance during local development and API testing.
+
+Changes:
+- apps/officer-workspace/src/services/dev-auth.ts (NEW)
+  * Synthetic auth token that satisfies AuthGuard checks
+  * Reads VITE_DEV_AUTH=true env var -- disabled in production
+  * Never reaches Keycloak; injects a local-only mock session
+
+- apps/officer-workspace/src/components/AuthGuard.tsx
+  * Check VITE_DEV_AUTH flag before redirecting to Keycloak
+  * Falls through to real OIDC flow when flag is absent
+
+- apps/officer-workspace/src/pages/LoginPage.tsx
+  * Add "Dev Mode" button visible only when VITE_DEV_AUTH=true
+  * Existing Keycloak SSO button and UI unchanged
+
+These files are intentionally limited in scope:
+  * No changes to real auth flow (auth.ts, oidc-client-ts config)
+  * No changes to any backend or services
+  * Dev flag is off by default (not set in .env)
+
+Testing note: set VITE_DEV_AUTH=true in apps/officer-workspace/.env.local
+for local-only use. Never commit .env.local.
