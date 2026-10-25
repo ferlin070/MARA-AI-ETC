@@ -1,4 +1,4 @@
-﻿import { useRef, useEffect, useState } from 'react';
+﻿import { useRef, useEffect, useState, type ReactNode } from 'react';
 import { Icon, Scrollable, Typography } from '@openhands/ui';
 import type { ChatMessage } from '../../types/workspace';
 import { AudioMessage } from './AudioMessage';
@@ -8,9 +8,16 @@ interface ChatPanelProps {
   onSend?: (text: string) => Promise<string | void> | void;
   uploading?: boolean;
   onFileAttach?: () => void;
+  /**
+   * Rendered directly above the composer while the officer has attached a file
+   * but has not yet chosen the assessment scope (sector/region). Kept as a slot
+   * so the start-flow state stays in WorkspacePage — ChatPanel only owns the
+   * message thread and the input bar.
+   */
+  startFlowPrompt?: ReactNode;
 }
 
-export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
+export function ChatPanel({ onSend, uploading, onFileAttach, startFlowPrompt }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -144,6 +151,7 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
 
       <div className="px-6 pb-6 pt-2">
         <div className="mx-auto max-w-3xl w-full">
+          {startFlowPrompt && <div className="mb-3">{startFlowPrompt}</div>}
           <div className="flex items-center w-full rounded-full bg-white dark:bg-dark-surface border border-gray-200 dark:border-gray-800 shadow-sm px-4 py-3 h-[58px] focus-within:border-indigo-500 focus-within:shadow-md transition-all">
             <div className="flex items-center gap-1.5 shrink-0">
               <button

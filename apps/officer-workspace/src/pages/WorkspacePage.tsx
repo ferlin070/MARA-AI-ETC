@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+﻿import { useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { AppLayout } from '../components/layout/AppLayout';
 import { ChatPanel } from '../components/workspace/ChatPanel';
@@ -6,9 +6,9 @@ import { TaskPanel } from '../components/workspace/TaskPanel';
 import { startAssessmentFull } from '../services/data';
 import { sendChatMessage } from '../services/api';
 import { useAssessments } from '../context/AssessmentContext';
-import { UI, WORKSPACE } from '../constants';
+import { REGIONS, SECTORS, UI, WORKSPACE } from '../constants';
 
-// ─── Local intent fallback ────────────────────────────────────────────────────
+// ─── Local intent fallback ──────────────────────────────────────────────────
 // Used when the backend /api/chat is unreachable (local dev without the full
 // stack). Keyword-based: deliberately simple so the backend LLM is the real
 // judge in production.
@@ -76,6 +76,16 @@ const CAPABILITY_REPLY =
 
 export function WorkspacePage() {
   const [uploading, setUploading] = useState(false);
+  /**
+   * A file the officer attached but has not scoped yet. Nothing is sent to the
+   * backend while this is set — the assessment needs a real sector and region
+   * (the Market agent researches against them and Finance prices against the
+   * regional base). Sending the placeholder defaults would produce an
+   * assessment that looks complete but is scoped to nothing.
+   */
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [sector, setSector] = useState<string>('');
+  const [region, setRegion] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { addAssessment } = useAssessments();
 
@@ -84,6 +94,18 @@ export function WorkspacePage() {
   }
 
   async function runAssessment(input: { file: File; sector: string; region: string }) {
+    // Defence in depth: never let a placeholder scope through, even if a caller
+    // slips past the prompt.
+    if (
+      !input.sector ||
+      !input.region ||
+      input.sector === UI.DEFAULT_SECTOR ||
+      input.region === UI.DEFAULT_REGION
+    ) {
+      toast.error(WORKSPACE.TOAST_CONTEXT_REQUIRED);
+      return;
+    }
+
     setUploading(true);
     try {
       const res = await startAssessmentFull(input);
@@ -105,15 +127,31 @@ export function WorkspacePage() {
     }
   }
 
-  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
-    await runAssessment({
-      file,
-      sector: UI.DEFAULT_SECTOR,
-      region: UI.DEFAULT_REGION,
-    });
+    // Always release the input value so re-picking the same file fires again.
     e.target.value = '';
+    if (!file) return;
+    setPendingFile(file);
+    setSector('');
+    setRegion('');
+  }
+
+  async function handleConfirmScope() {
+    const file = pendingFile;
+    if (!file) return;
+    if (!sector || !region) {
+      toast.error(WORKSPACE.TOAST_CONTEXT_REQUIRED);
+      return;
+    }
+    setPendingFile(null);
+    await runAssessment({ file, sector, region });
+  }
+
+  function handleCancelScope() {
+    setPendingFile(null);
+    setSector('');
+    setRegion('');
   }
 
   async function handleSend(text: string): Promise<string> {
@@ -136,11 +174,100 @@ export function WorkspacePage() {
     }
   }
 
+  const needsScope = pendingFile !== null;
+
+  const scopePrompt: ReactNode = needsScope ? (
+    <div
+      className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-700/60 dark:bg-amber-950/30"
+      data-testid="assessment-scope-prompt"
+    >
+      <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+        {WORKSPACE.CONTEXT_PROMPT_HEADING}
+      </p>
+      <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
+        {WORKSPACE.CONTEXT_PROMPT_BODY}
+      </p>
+
+      <div className="mt-3 flex flex-wrap items-end gap-3">
+        <div className="min-w-0 flex-1">
+          <label
+            htmlFor="assessment-sector"
+            className="mb-1 block text-xs font-medium text-amber-900 dark:text-amber-200"
+          >
+            {WORKSPACE.CONTEXT_PROMPT_SECTOR_LABEL}
+          </label>
+          <select
+            id="assessment-sector"
+            data-testid="assessment-sector-select"
+            value={sector}
+            onChange={(e) => setSector(e.target.value)}
+            className="w-full cursor-pointer rounded-md border border-amber-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-400/40 dark:border-amber-700/60 dark:bg-dark-surface dark:text-slate-100"
+          >
+            <option value="">{WORKSPACE.CONTEXT_PROMPT_SECTOR_PLACEHOLDER}</option>
+            {SECTORS.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <label
+            htmlFor="assessment-region"
+            className="mb-1 block text-xs font-medium text-amber-900 dark:text-amber-200"
+          >
+            {WORKSPACE.CONTEXT_PROMPT_REGION_LABEL}
+          </label>
+          <select
+            id="assessment-region"
+            data-testid="assessment-region-select"
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            className="w-full cursor-pointer rounded-md border border-amber-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-400/40 dark:border-amber-700/60 dark:bg-dark-surface dark:text-slate-100"
+          >
+            <option value="">{WORKSPACE.CONTEXT_PROMPT_REGION_PLACEHOLDER}</option>
+            {REGIONS.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <p className="mt-2 truncate text-xs text-amber-700 dark:text-amber-400">
+        {WORKSPACE.CONTEXT_PROMPT_FILE_LABEL}: {pendingFile?.name}
+      </p>
+
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          data-testid="assessment-start-button"
+          onClick={handleConfirmScope}
+          disabled={uploading || !sector || !region}
+          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {WORKSPACE.CONTEXT_PROMPT_CONFIRM}
+        </button>
+        <button
+          type="button"
+          onClick={handleCancelScope}
+          disabled={uploading}
+          className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-300 dark:hover:bg-dark-surface-hover"
+        >
+          {WORKSPACE.CONTEXT_PROMPT_CANCEL}
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <AppLayout title={WORKSPACE.PAGE_TITLE} subtitle={WORKSPACE.PAGE_SUBTITLE}>
       <div className="flex h-full gap-4">
         <TaskPanel />
-        <ChatPanel onSend={handleSend} uploading={uploading} onFileAttach={handleFileAttach} />
+        <ChatPanel
+          onSend={handleSend}
+          uploading={uploading}
+          onFileAttach={handleFileAttach}
+          startFlowPrompt={scopePrompt}
+        />
       </div>
       <input
         ref={fileInputRef}
