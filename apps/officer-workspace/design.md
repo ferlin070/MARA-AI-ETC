@@ -46,3 +46,31 @@ Berikut adalah senarai keseluruhan ciri (*features*) yang terdapat di dalam sist
    - **Chat Panel:** Sembang interaktif bersama ejen AI untuk mengarahkan tugasan baru (cth: *"Assess the loan application from Ahmad bin Abdullah"*) atau menyemak analisis dokumen usahawan.
 4. **Metrik & Statistik Portfolio Usahawan (*Dashboard Stats & Monitoring*):**
 ... (file truncated for brevity in this commit)
+
+---
+
+## Nota Konvensyen CSS (FE-3.10)
+
+Keputusan: **Tailwind kekal sebagai satu-satunya lapisan gaya utama.** Tiada
+penulisan semula kepada CSS Modules, styled-components, atau sistem tema
+baharu. Item 3.10 dalam `scratch/PLAN.md` ialah nota konvensyen, bukan kerja
+kod.
+
+Peraturan untuk kerja seterusnya:
+
+1. **Utiliti Tailwind dahulu.** Kelas utiliti untuk susun atur, jarak, tipografi,
+   dan keadaan. Jangan tambah fail CSS baharu untuk sesuatu yang satu kelas
+   Tailwind boleh selesaikan.
+2. **Warna melalui token, bukan hex.** Semua permukaan gelap merujuk
+   `--color-dark-*` dalam `src/index.css` (`bg-dark-surface`,
+   `border-dark-border`, `text-dark-*`). Hex literal seperti `#18191C` dalam
+   `className` ialah hutang — betulkan bila fail itu disentuh, jangan tambah
+   yang baharu. Senarai fail yang belum dimigrasi ada dalam mesej commit FE-3.7.
+3. **CSS Module hanya untuk yang Tailwind tidak boleh ungkap.** Contoh sedia ada:
+   `LoginPage.module.css` dan `ApplicantPortalPage.module.css` — animasi
+   berbilang lapisan dan susun atur split-view yang memerlukan `@keyframes`
+   atau `calc()` bersarang. Itu pengecualian yang sah, bukan corak umum.
+4. **Tiada `!important` baharu.** Lapisan reset dalam `index.css` (margin tubuh,
+   `#root`) ialah satu-satunya blok yang menggunakannya, dan ia kekal di situ.
+5. **Varian gelap melalui kelas `dark:`**, bukan override media query manual.
+   `@custom-variant dark` dalam `index.css` sudah mengikatnya kepada `.dark`.
