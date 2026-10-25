@@ -136,10 +136,47 @@ export async function loginMock(): Promise<void> {
 // Real Keycloak OIDC flow
 // ---------------------------------------------------------------------------
 
-/** Redirect the browser to Keycloak SSO login page. */
-export async function login(): Promise<void> {
+/**
+ * Build the post-login destination and validate it as an in-app path.
+ * Rejects absolute URLs and protocol-relative paths so a tampered `state`
+ * value cannot turn the callback into an open redirect.
+ */
+export function safeReturnPath(candidate: unknown): string {
+  if (typeof candidate !== 'string') return '/';
+  if (!candidate.startsWith('/') || candidate.startsWith('//')) return '/';
+  if (candidate.startsWith('/login') || candidate.startsWith('/callback')) return '/';
+  return candidate;
+}
+
+/** Key used by AuthGuard to remember the deep link that bounced to /login. */
+export const RETURN_TO_STORAGE_KEY = 'mara_return_to';
+
+function currentReturnPath(): string {
+  const { pathname, search, hash } = window.location;
+  // On /login the visible URL is not what the officer asked for — AuthGuard
+  // stashes the attempted path so the SSO round-trip can restore it.
+  if (pathname === '/login' || pathname === '/callback') {
+    const stashed = window.sessionStorage.getItem(RETURN_TO_STORAGE_KEY);
+    if (stashed) return safeReturnPath(stashed);
+  }
+  return safeReturnPath(`${pathname}${search}${hash}`);
+}
+
+/**
+ * Redirect the browser to Keycloak SSO login page.
+ * @param returnTo in-app path to restore after the callback (defaults to now)
+ */
+export async function login(returnTo?: string): Promise<void> {
   const mgr = getUserManager();
-  await mgr.signinRedirect();
+  await mgr.signinRedirect({ state: { url: safeReturnPath(returnTo ?? currentReturnPath()) } });
+}
+
+/** Resolve the original URL stashed in OIDC state by {@link login}. */
+export function getPostLoginRedirect(user: User): string {
+  const state = user.state as { url?: unknown } | undefined;
+  const target = safeReturnPath(state?.url);
+  window.sessionStorage.removeItem(RETURN_TO_STORAGE_KEY);
+  return target;
 }
 
 /** Handle the OIDC redirect callback and return the authenticated user. */
@@ -162,8 +199,56 @@ export async function logout(): Promise<void> {
     return;
   }
 
+  // Suppress the session-expiry redirect while a deliberate sign-out runs,
+  // otherwise it races signoutRedirect() and strands the user on /login.
+  intentionalLogout = true;
   const mgr = getUserManager();
   await mgr.signoutRedirect();
+}
+
+// ---------------------------------------------------------------------------
+// Session expiry handling
+// ---------------------------------------------------------------------------
+
+let intentionalLogout = false;
+let listenersBound = false;
+
+/**
+ * Hard-navigate to /login because the session is gone (token expired or was
+ * signed out elsewhere). Skips when the user is already on an auth route or is
+ * authenticated through the dev mock, which has no OIDC session to expire.
+ */
+function handleSessionExpired(): void {
+  if (intentionalLogout) return;
+  if (window.sessionStorage.getItem(MOCK_USER_STORAGE_KEY)) return;
+
+  const { pathname } = window.location;
+  if (pathname === '/login' || pathname === '/callback') return;
+
+  window.location.assign(window.location.origin + '/login');
+}
+
+/**
+ * Subscribe to oidc-client-ts session events so an expired or revoked token
+ * logs the officer out automatically instead of leaving dead pages on screen:
+ *   - addUserSignedOut: sign-out in another tab, or session invalidation
+ *   - addSilentRenewError: refresh token rejected / IdP unreachable
+ * Safe to call more than once; binding happens only once per page load.
+ * @returns teardown that removes the listeners
+ */
+export function initAuthSessionListeners(): () => void {
+  if (listenersBound) return () => undefined;
+  listenersBound = true;
+
+  const events = getUserManager().events;
+  const offSignedOut = events.addUserSignedOut(handleSessionExpired);
+  const offRenewError = events.addSilentRenewError(handleSessionExpired);
+
+  return () => {
+    offSignedOut();
+    offRenewError();
+    listenersBound = false;
+  };
 }
 
 /** Return the currently authenticated user, or null. */

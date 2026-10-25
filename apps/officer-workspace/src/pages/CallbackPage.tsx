@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { handleRedirectCallback } from '../services/auth';
+import { getPostLoginRedirect, handleRedirectCallback } from '../services/auth';
 
 /**
  * Dedicated OIDC redirect-callback page.
@@ -29,9 +29,10 @@ export function CallbackPage() {
       try {
         const user = await handleRedirectCallback();
         if (user) {
-          // Navigate to the original destination (oidc-client-ts restores it
-          // from the state parameter) or fall back to workspace root.
-          navigate('/', { replace: true });
+          // Navigate to the original destination the officer asked for before
+          // the SSO round-trip (stored as state.url in services/auth.ts) or
+          // fall back to workspace root.
+          navigate(getPostLoginRedirect(user), { replace: true });
         } else {
           setError('Sesi log masuk tidak berjaya. Token tidak diterima daripada pelayan.');
         }

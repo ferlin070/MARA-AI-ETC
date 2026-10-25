@@ -38,7 +38,7 @@ export function LoginCard() {
 
       {/* SSO Button */}
       <button
-        onClick={login}
+        onClick={() => void login()}
         className={`${styles.button} ${styles.secondaryButton}`}
       >
         <span className={styles.buttonIcon}>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { getUser } from '../services/auth';
+import { getUser, RETURN_TO_STORAGE_KEY } from '../services/auth';
 import { isDevMode } from '../services/dev-auth';
 
 interface AuthGuardProps {
@@ -41,6 +41,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
       if (user && !user.expired) {
         setAuthenticated(true);
       } else {
+        // Remember the blocked deep link so the SSO round-trip can restore it.
+        window.sessionStorage.setItem(
+          RETURN_TO_STORAGE_KEY,
+          `${window.location.pathname}${window.location.search}${window.location.hash}`,
+        );
         navigate('/login', { replace: true });
       }
 
