@@ -1,4 +1,4 @@
-import { Icon } from '@openhands/ui';
+﻿import { Icon } from '@openhands/ui';
 import { login, loginMock } from '../../services/auth';
 import styles from './LoginPage.module.css';
 
@@ -21,7 +21,7 @@ export function LoginCard() {
         Sila log masuk untuk mengakses ruang kerja pemprosesan permohonan usahawan.
       </p>
 
-      {/* Primary CTA — Portal Pemohon */}
+      {/* Primary CTA – Portal Pemohon */}
       <a href="/applicant" className={`${styles.button} ${styles.primaryButton}`}>
         <span className={styles.buttonLabel}>Portal Pemohon Usahawan (Hantar Permohonan)</span>
         <span className={styles.buttonIcon}>
@@ -48,6 +48,7 @@ export function LoginCard() {
       </button>
 
       {/* Dev-only Mock button */}
+      {import.meta.env.DEV && (
       <button
         onClick={loginMock}
         className={`${styles.button} ${styles.tertiaryButton}`}
@@ -58,6 +59,7 @@ export function LoginCard() {
         <span className={styles.buttonLabel}>Log Masuk Pegawai (Mod Mock)</span>
         <span className={styles.devBadge}>DEV</span>
       </button>
+      )}
 
       {/* Milestone 0 */}
       <div className={styles.milestoneCard}>
