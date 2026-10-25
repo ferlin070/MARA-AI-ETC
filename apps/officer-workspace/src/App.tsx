@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage';
 import { WorkspacePage } from './pages/WorkspacePage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ReviewConsolePage } from './pages/ReviewConsolePage';
+import { CaseDetailPage } from './pages/CaseDetailPage';
 import { AdminConsolePage } from './pages/AdminConsolePage';
 import { AuditorConsolePage } from './pages/AuditorConsolePage';
 import { ApplicantPortalPage } from './pages/ApplicantPortalPage';
@@ -22,6 +23,7 @@ export function App() {
           <Route path="/" element={<AuthGuard><WorkspacePage /></AuthGuard>} />
           <Route path="/dashboard" element={<AuthGuard><DashboardPage /></AuthGuard>} />
           <Route path="/review" element={<AuthGuard><ReviewConsolePage /></AuthGuard>} />
+          <Route path="/review/:id" element={<AuthGuard><CaseDetailPage /></AuthGuard>} />
           <Route path="/admin" element={<AuthGuard><AdminConsolePage /></AuthGuard>} />
           <Route path="/auditor" element={<AuthGuard><AuditorConsolePage /></AuthGuard>} />
         </Routes>
@@ -29,4 +31,5 @@ export function App() {
     </AssessmentProvider>
   );
 }
+
 
