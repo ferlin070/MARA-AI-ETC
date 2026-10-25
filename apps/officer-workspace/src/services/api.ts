@@ -1,5 +1,7 @@
 import { getAccessToken } from './auth';
 import { API } from '../constants';
+import type { Citation } from '../types/documents';
+import type { PolicyCitation } from '../types/knowledge';
 
 const API_BASE = import.meta.env.VITE_API_GATEWAY_URL || API.BASE_PATH;
 
@@ -199,6 +201,85 @@ export interface V1ApplicationDocument {
   file_path: string;
 }
 
+// ─── AI Assessment — mirrors shared/schemas/ contracts ─────────────────────
+
+export interface AiAssessmentComplianceItem {
+  requirement: string;
+  status: 'pass' | 'fail' | 'exception' | 'no_policy_found';
+  policy_citation: PolicyCitation | null;
+  notes?: string;
+}
+
+export interface AiAssessmentCompliance {
+  document_id: string;
+  items: AiAssessmentComplianceItem[];
+}
+
+export interface AiAssessmentFinanceFigure {
+  name: string;
+  value: number;
+  provenance: 'extracted' | 'calculated';
+  source_citation?: Citation | null;
+  formula_id?: string | null;
+  formula_version?: string | null;
+}
+
+export interface AiAssessmentFinance {
+  document_id: string;
+  figures: AiAssessmentFinanceFigure[];
+  assessment: string;
+  assessment_confidence: number;
+  product_term_citations: PolicyCitation[];
+}
+
+export interface AiAssessmentRisk {
+  document_id: string;
+  status: 'complete' | 'incomplete' | 'escalated';
+  component_scores: Record<string, number>;
+  overall_score: number | null;
+  qualitative_range: string | null;
+  confidence: number;
+  missing_inputs: string[];
+  escalation_reason: string | null;
+  citations: PolicyCitation[];
+}
+
+export interface AiAssessmentMarketClaim {
+  claim: string;
+  source_url: string;
+  retrieved_at: string;
+  credibility_score: number;
+}
+
+export interface AiAssessmentMarket {
+  sector: string;
+  region: string;
+  claims: AiAssessmentMarketClaim[];
+  live_search_available: boolean;
+  note: string;
+}
+
+export interface AiAssessmentRecommendation {
+  document_id: string;
+  decision: 'approve' | 'decline' | 'approve_with_conditions' | null;
+  reasoning_trail: string;
+  conditions: string[];
+  confidence: number;
+  precedent_citations: PolicyCitation[];
+  withheld_reason: string | null;
+  missing_inputs: string[];
+  has_acknowledged_violation: boolean;
+}
+
+/** Typed shape of V1ApplicationDetailOutput.ai_assessment — mirrors shared/schemas/ */
+export interface AiAssessment {
+  compliance?: AiAssessmentCompliance;
+  finance?: AiAssessmentFinance;
+  risk?: AiAssessmentRisk;
+  market?: AiAssessmentMarket;
+  recommendation?: AiAssessmentRecommendation;
+}
+
 export interface V1ApplicationDetailOutput {
   application_id: string;
   status: V1ApplicationStatus;
@@ -223,7 +304,7 @@ export interface V1ApplicationDetailOutput {
     tenure_months: number;
   };
   documents: V1ApplicationDocument[];
-  ai_assessment: Record<string, unknown>;
+  ai_assessment: AiAssessment;
   workflow: Record<string, unknown>;
 }
 

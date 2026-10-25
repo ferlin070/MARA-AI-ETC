@@ -86,7 +86,7 @@ export function extractProfile(user: User | MockUserShape): UserProfile {
 // Mock / Dev Mode (dev builds only)
 // ---------------------------------------------------------------------------
 
-const MOCK_USER_STORAGE_KEY = 'mara_mock_auth_user';
+const MOCK_USER_STORAGE_KEY = 'mara_dev_mode_user';
 
 interface MockUserShape {
   profile: Record<string, unknown>;
@@ -96,14 +96,14 @@ interface MockUserShape {
 }
 
 async function fetchBackendDevToken(): Promise<string | null> {
+  const devEmail = import.meta.env.VITE_DEV_OFFICER_EMAIL;
+  const devPassword = import.meta.env.VITE_DEV_OFFICER_PASSWORD;
+  if (!devEmail || !devPassword) return null;
   try {
     const response = await fetch('/api/v1/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: 'officer@mara.local',
-        password: 'Officer123!',
-      }),
+      body: JSON.stringify({ email: devEmail, password: devPassword }),
     });
     if (!response.ok) return null;
     const body = (await response.json()) as { access_token?: string };

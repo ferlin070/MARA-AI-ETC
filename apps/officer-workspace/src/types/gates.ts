@@ -45,9 +45,14 @@ export interface RiskPayload {
 }
 
 export interface RecommendationPayload {
-  decision: string;
+  decision: string | null;
   rationale: string;
   confidence: number;
+  conditions?: string[];
+  has_acknowledged_violation: boolean;
+  withheld_reason?: string | null;
+  missing_inputs?: string[];
+  precedent_citations?: PolicyCitation[];
 }
 
 export interface PublishPayload {
