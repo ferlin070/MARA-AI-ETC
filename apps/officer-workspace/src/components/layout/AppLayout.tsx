@@ -5,7 +5,6 @@ import { getUserProfile, logout } from '../../services/auth';
 import { useTheme } from '../../context/ThemeContext';
 import type { UserProfile } from '../../services/auth';
 import logo from '../../assets/mara-ai-etc.png';
-import { MOCK_AUTH } from '../../constants';
 
 interface AppLayoutProps {
   title: string;
@@ -66,14 +65,39 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   const { theme, toggleTheme } = useTheme();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
-    getUserProfile().then(setProfile);
+    let cancelled = false;
+    getUserProfile()
+      .then((p) => {
+        if (!cancelled) setProfile(p);
+      })
+      .finally(() => {
+        if (!cancelled) setProfileLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const displayName = profile?.name ?? MOCK_AUTH.DEV_NAME;
-  const displayRole = `Cawangan Ibu Pejabat · ${profile?.roles[0] ?? MOCK_AUTH.DEV_ROLE}`;
+  // While the profile loads, show skeletons; if it resolves null (e.g. no
+  // auth session), show an honest '—' rather than a fabricated dev identity.
+  const displayName = profile?.name ?? '—';
+  const displayRole = profileLoaded
+    ? `Cawangan Ibu Pejabat · ${profile?.roles[0] ?? '—'}`
+    : 'Cawangan Ibu Pejabat';
+  const nameSkeleton = profileLoaded ? (
+    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{displayName}</p>
+  ) : (
+    <div className="h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-dark-surface-hover" aria-label="Memuatkan profil" />
+  );
+  const roleSkeleton = profileLoaded ? (
+    <p className="text-xs text-slate-500 dark:text-slate-400">{displayRole}</p>
+  ) : (
+    <div className="mt-1.5 h-3 w-32 animate-pulse rounded bg-slate-200 dark:bg-dark-surface-hover" />
+  );
 
   /**
    * Sign-out is a redirect: `logout()` navigates to the Keycloak end-session
@@ -136,8 +160,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <Icon icon={theme === 'dark' ? 'MoonFill' : 'SunFill'} className="h-4 w-4 text-amber-500 dark:text-indigo-400" />
           <span>{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
         </button>
-        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{displayName}</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">{displayRole}</p>
+        {nameSkeleton}
+        {roleSkeleton}
         <button
           onClick={handleLogout}
           disabled={signingOut}
