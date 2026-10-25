@@ -74,7 +74,8 @@ function queueItemToWorkflow(item: V1OfficerQueueItem): WorkflowInstance {
     created_at: item.updated_at,
     updated_at: item.updated_at,
     assigned_agent: 'Loan Workflow',
-    confidence: 0.92,
+    // No confidence score is exposed by /api/v1/officer/applications today.
+    // Left undefined rather than inventing 0.92 — consumers must render a dash.
   };
 }
 
@@ -120,8 +121,10 @@ export async function fetchWorkflows(): Promise<WorkflowInstance[]> {
 }
 
 export async function fetchAgentMetrics(): Promise<AgentMetric[]> {
-  // TODO: wire to GET /api/v1/admin/agent-metrics when endpoint is ready
-  return [];
+  // GET /api/v1/admin/agent-metrics does not exist yet. Throw so the dashboard
+  // can label the panel "Agent metrics belum tersedia" instead of showing an
+  // empty table that implies zero traffic.
+  throw new ApiNotAvailableError('Agent metrics');
 }
 
 export async function fetchRiskFlags(): Promise<RiskFlag[]> {

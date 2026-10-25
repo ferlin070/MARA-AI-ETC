@@ -4,9 +4,13 @@ import { CONFIDENCE } from '../../constants';
 
 interface AgentMetricsProps {
   metrics: AgentMetric[];
+  /** True when the metrics endpoint does not exist yet (backend gap, not an error). */
+  unavailable?: boolean;
+  /** Non-null when the metrics call failed for a reason other than "not built". */
+  error?: string | null;
 }
 
-export function AgentMetrics({ metrics }: AgentMetricsProps) {
+export function AgentMetrics({ metrics, unavailable = false, error = null }: AgentMetricsProps) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white dark:border-[#222328] dark:bg-[#131417] p-5 shadow-xs">
       <div className="mb-3">
@@ -15,7 +19,27 @@ export function AgentMetrics({ metrics }: AgentMetricsProps) {
         </Typography.Text>
       </div>
 
-      {metrics.length === 0 && (
+      {unavailable && metrics.length === 0 && (
+        <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/60 px-4 py-6 text-center dark:border-amber-800/60 dark:bg-amber-950/20">
+          <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+            Agent metrics belum tersedia
+          </p>
+          <p className="mt-1 text-xs text-amber-600/80 dark:text-amber-400/80">
+            Endpoint GET /api/v1/admin/agent-metrics belum dibina. Tiada angka contoh dipaparkan.
+          </p>
+        </div>
+      )}
+
+      {error && metrics.length === 0 && (
+        <div className="rounded-lg border border-dashed border-rose-300 bg-rose-50/60 px-4 py-6 text-center dark:border-rose-800/60 dark:bg-rose-950/20">
+          <p className="text-sm font-medium text-rose-700 dark:text-rose-300">
+            Gagal memuatkan prestasi ejen
+          </p>
+          <p className="mt-1 text-xs text-rose-600/80 dark:text-rose-400/80">{error}</p>
+        </div>
+      )}
+
+      {!unavailable && !error && metrics.length === 0 && (
         <div className="rounded-lg border border-dashed border-slate-200 dark:border-[#2C2E34] py-8 text-center text-xs text-slate-400 dark:text-slate-500">
           Tiada data prestasi ejen
         </div>

@@ -5,6 +5,7 @@ import { WorkflowList } from '../components/dashboard/WorkflowList';
 import { PendingSummary } from '../components/dashboard/PendingSummary';
 import { AgentMetrics } from '../components/dashboard/AgentMetrics';
 import {
+  ApiNotAvailableError,
   fetchDashboardStats,
   fetchWorkflows,
   fetchAgentMetrics,
@@ -21,6 +22,10 @@ export function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [workflows, setWorkflows] = useState<WorkflowInstance[]>([]);
   const [metrics, setMetrics] = useState<AgentMetric[]>([]);
+  // Agent metrics come from a separate (not yet built) endpoint — track its
+  // availability independently so a missing endpoint does not blank the page.
+  const [metricsUnavailable, setMetricsUnavailable] = useState(false);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
   const [riskFlags, setRiskFlags] = useState<RiskFlag[]>([]);
   const [approvals, setApprovals] = useState<PendingApprovalSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,18 +36,31 @@ export function DashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        const [s, w, m, r, a] = await Promise.all([
+        const [s, w, r, a] = await Promise.all([
           fetchDashboardStats(),
           fetchWorkflows(),
-          fetchAgentMetrics(),
           fetchRiskFlags(),
           fetchPendingApprovals(),
         ]);
         setStats(s);
         setWorkflows(w);
-        setMetrics(m);
         setRiskFlags(r);
         setApprovals(a);
+
+        try {
+          setMetrics(await fetchAgentMetrics());
+          setMetricsUnavailable(false);
+          setMetricsError(null);
+        } catch (metricsErr) {
+          setMetrics([]);
+          if (metricsErr instanceof ApiNotAvailableError) {
+            setMetricsUnavailable(true);
+          } else {
+            setMetricsError(
+              metricsErr instanceof Error ? metricsErr.message : String(metricsErr),
+            );
+          }
+        }
       } catch {
         setError('Dashboard data is unavailable. The API endpoint has not been built yet.');
       } finally {
@@ -98,7 +116,11 @@ export function DashboardPage() {
           <PendingSummary approvals={approvals} riskFlags={riskFlags} />
         </div>
 
-        <AgentMetrics metrics={metrics} />
+        <AgentMetrics
+          metrics={metrics}
+          unavailable={metricsUnavailable}
+          error={metricsError}
+        />
       </div>
     </AppLayout>
   );

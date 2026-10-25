@@ -25,7 +25,8 @@ export interface WorkflowInstance {
   created_at: string;
   updated_at: string;
   assigned_agent: string;
-  confidence: number;
+  /** Optional: only present when the backend actually reports a score. */
+  confidence?: number;
 }
 
 export interface AgentMetric {
