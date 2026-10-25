@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router';
-import { Icon, Input } from '@openhands/ui';
+import { Icon } from '@openhands/ui';
 import { getUserProfile, logout } from '../../services/auth';
 import { useTheme } from '../../context/ThemeContext';
 import type { UserProfile } from '../../services/auth';
@@ -85,9 +85,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Officer Workspace</p>
             </div>
           </div>
-        </div>
-        <div className="mt-3 px-3 sidebar-search-input">
-          <Input label="Search" placeholder="Search..." start={<Icon icon="Search" />} />
         </div>
         <nav className="mt-2 space-y-1 px-3">
           {NAV_ITEMS.map((item) => (
