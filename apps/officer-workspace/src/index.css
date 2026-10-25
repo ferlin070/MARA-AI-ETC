@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap");
+﻿@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Outfit:wght@100..900&display=swap");
 @import 'tailwindcss';
 @import '../../../packages/openhands-ui/tokens.css';
@@ -8,6 +8,30 @@
 @source "../../../packages/openhands-ui/index.ts";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* ===== MARA workspace tokens =====
+   Single source for the dark surface palette. Components must reference the
+   generated utilities (bg-dark-surface, border-dark-border, ...) or the
+   variables directly (var(--color-dark-surface)) instead of repeating hex
+   literals. These live here, not in tailwind.config.ts, so the values are
+   inspectable at runtime and available to plain CSS as well as Tailwind.
+
+   Value map (was previously hardcoded in component className strings):
+     #0D0D0F  page background        -> --color-dark-bg
+     #131417  sidebar / raised panel -> --color-dark-sidebar
+     #18191C  card / input surface   -> --color-dark-surface
+     #222328  hover surface, subtle  -> --color-dark-surface-hover
+     #2C2E34  border                 -> --color-dark-border
+*/
+@theme {
+  --color-dark-bg: #0d0d0f;
+  --color-dark-sidebar: #131417;
+  --color-dark-surface: #18191c;
+  --color-dark-surface-hover: #222328;
+  --color-dark-border: #2c2e34;
+  --color-dark-border-subtle: #222328;
+  --color-dark-accent: #4f46e5;
+}
 
 /* ===== Hard reset: eliminate browser-default body margin (8px) that
    causes white gaps around full-bleed layouts like the login split-view ===== */

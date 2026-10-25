@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+﻿import { useRef, useEffect, useState } from 'react';
 import { Icon, Scrollable, Typography } from '@openhands/ui';
 import type { ChatMessage } from '../../types/workspace';
 import { AudioMessage } from './AudioMessage';
@@ -108,7 +108,7 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex items-center border-b border-slate-200 bg-white/50 dark:border-[#222328] dark:bg-[#131417]/50 backdrop-blur-sm px-6 py-3.5 shadow-sm">
+      <div className="flex items-center border-b border-slate-200 bg-white/50 dark:border-dark-border dark:bg-dark-sidebar/50 backdrop-blur-sm px-6 py-3.5 shadow-sm">
         <Typography.H3 className="font-bold text-slate-900 dark:text-white">{WORKSPACE.CHAT_HEADING}</Typography.H3>
       </div>
 
@@ -129,7 +129,7 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
           )}
           {isThinking && (
             <div className="flex justify-start">
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-[#2C2E34] dark:bg-[#18191C]">
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-dark-border dark:bg-dark-surface">
                 <div className="flex items-center gap-1.5">
                   <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: '0ms' }} />
                   <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: '150ms' }} />
@@ -144,7 +144,7 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
 
       <div className="px-6 pb-6 pt-2">
         <div className="mx-auto max-w-3xl w-full">
-          <div className="flex items-center w-full rounded-full bg-white dark:bg-[#18191C] border border-gray-200 dark:border-gray-800 shadow-sm px-4 py-3 h-[58px] focus-within:border-indigo-500 focus-within:shadow-md transition-all">
+          <div className="flex items-center w-full rounded-full bg-white dark:bg-dark-surface border border-gray-200 dark:border-gray-800 shadow-sm px-4 py-3 h-[58px] focus-within:border-indigo-500 focus-within:shadow-md transition-all">
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
@@ -208,7 +208,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         className={`max-w-[80%] rounded-xl px-4 py-3 shadow-sm ${
           isUser
             ? 'bg-indigo-600 text-white'
-            : 'bg-white border border-slate-200 text-slate-800 dark:bg-[#18191C] dark:border-[#2C2E34] dark:text-slate-200'
+            : 'bg-white border border-slate-200 text-slate-800 dark:bg-dark-surface dark:border-dark-border dark:text-slate-200'
         }`}
       >
         {!isUser && message.agent_name && (
