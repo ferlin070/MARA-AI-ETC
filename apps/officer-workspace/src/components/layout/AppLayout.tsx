@@ -1,10 +1,11 @@
-import { useEffect, useState, type ReactNode } from 'react';
+﻿import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router';
 import { Icon } from '@openhands/ui';
 import { getUserProfile, logout } from '../../services/auth';
 import { useTheme } from '../../context/ThemeContext';
 import type { UserProfile } from '../../services/auth';
 import logo from '../../assets/mara-ai-etc.png';
+import { MOCK_AUTH } from '../../constants';
 
 interface AppLayoutProps {
   title: string;
@@ -65,43 +66,37 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   const { theme, toggleTheme } = useTheme();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    getUserProfile()
-      .then((p) => {
-        if (!cancelled) setProfile(p);
-      })
-      .finally(() => {
-        if (!cancelled) setProfileLoaded(true);
-      });
-    return () => {
-      cancelled = true;
-    };
+    getUserProfile().then(setProfile);
   }, []);
 
-  // While the profile loads, show skeletons; if it resolves null (e.g. no
-  // auth session), show an honest '—' rather than a fabricated dev identity.
-  const displayName = profile?.name ?? '—';
-  const displayRole = profileLoaded
-    ? `Cawangan Ibu Pejabat · ${profile?.roles[0] ?? '—'}`
-    : 'Cawangan Ibu Pejabat';
-  const nameSkeleton = profileLoaded ? (
-    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{displayName}</p>
-  ) : (
-    <div className="h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-[#222328]" aria-label="Memuatkan profil" />
-  );
-  const roleSkeleton = profileLoaded ? (
-    <p className="text-xs text-slate-500 dark:text-slate-400">{displayRole}</p>
-  ) : (
-    <div className="mt-1.5 h-3 w-32 animate-pulse rounded bg-slate-200 dark:bg-[#222328]" />
-  );
+  const displayName = profile?.name ?? MOCK_AUTH.DEV_NAME;
+  const displayRole = `Cawangan Ibu Pejabat · ${profile?.roles[0] ?? MOCK_AUTH.DEV_ROLE}`;
+
+  /**
+   * Sign-out is a redirect: `logout()` navigates to the Keycloak end-session
+   * endpoint (or to /login in mock mode). Until that navigation starts, the
+   * button must lock so a second click cannot fire a second signout request
+   * or leave a dead button while the IdP round-trip is in flight.
+   * The `finally` only runs if logout() threw — a successful sign-out
+   * unloads the page, so the reset is for the failure path only.
+   */
+  async function handleLogout() {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await logout();
+    } catch {
+      setSigningOut(false);
+    }
+  }
 
   return (
     <div className="flex h-full flex-col justify-between">
       <div>
-        <div className="border-b border-slate-200 dark:border-[#222328] px-5 py-4">
+        <div className="border-b border-slate-200 dark:border-dark-border px-5 py-4">
           <div className="flex items-center gap-3">
             <img src={logo} alt="MARA AI-ETC Logo" className="h-9 w-auto shrink-0 object-contain" />
             <div>
@@ -120,8 +115,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-sm dark:bg-[#24272E] dark:text-white dark:border-l-2 dark:border-indigo-500'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-[#9A9CA2] dark:hover:bg-[#18191C] dark:hover:text-white'
+                    ? 'bg-indigo-600 text-white shadow-sm dark:bg-dark-surface-hover dark:text-white dark:border-l-2 dark:border-indigo-500'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-[#9A9CA2] dark:hover:bg-dark-surface dark:hover:text-white'
                 }`
               }
             >
@@ -132,26 +127,41 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </nav>
       </div>
 
-      <div className="border-t border-slate-200 dark:border-[#222328] px-4 py-3">
+      <div className="border-t border-slate-200 dark:border-dark-border px-4 py-3">
         <button
           onClick={toggleTheme}
-          className="mb-3 flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-200 dark:border-[#2C2E34] dark:bg-[#18191C] dark:text-slate-200 dark:hover:bg-[#222328] cursor-pointer shadow-2xs"
+          className="mb-3 flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-200 dark:border-dark-border dark:bg-dark-surface dark:text-slate-200 dark:hover:bg-dark-surface-hover cursor-pointer shadow-2xs"
           title="Toggle Light/Dark Theme"
         >
           <Icon icon={theme === 'dark' ? 'MoonFill' : 'SunFill'} className="h-4 w-4 text-amber-500 dark:text-indigo-400" />
           <span>{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
         </button>
-        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{nameSkeleton}</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">{roleSkeleton}</p>
+        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{displayName}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{displayRole}</p>
         <button
-          onClick={logout}
-          className="mt-2 flex items-center gap-1.5 text-xs font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 hover:underline cursor-pointer"
-          title="Log out"
+          onClick={handleLogout}
+          disabled={signingOut}
+          aria-busy={signingOut}
+          className="mt-2 flex items-center gap-1.5 text-xs font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 hover:underline cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 disabled:no-underline"
+          title={signingOut ? 'Logging out…' : 'Log out'}
         >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          <span>Log keluar</span>
+          {signingOut ? (
+            <svg
+              className="h-3.5 w-3.5 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" d="M12 3a9 9 0 109 9" />
+            </svg>
+          ) : (
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          )}
+          <span>{signingOut ? 'Log keluar…' : 'Log keluar'}</span>
         </button>
       </div>
     </div>
@@ -162,9 +172,9 @@ export function AppLayout({ title, subtitle, children }: AppLayoutProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 text-slate-900 dark:bg-[#0D0D0F] dark:text-slate-100">
+    <div className="flex h-screen w-full bg-slate-50 text-slate-900 dark:bg-dark-bg dark:text-slate-100">
       {/* Desktop sidebar */}
-      <aside className="hidden w-56 shrink-0 border-r border-slate-200 bg-white dark:border-[#222328] dark:bg-[#131417] md:block">
+      <aside className="hidden w-56 shrink-0 border-r border-slate-200 bg-white dark:border-dark-border dark:bg-dark-sidebar md:block">
         <SidebarContent />
       </aside>
 
@@ -175,11 +185,11 @@ export function AppLayout({ title, subtitle, children }: AppLayoutProps) {
             className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-xs transition-opacity"
             onClick={() => setMobileNavOpen(false)}
           />
-          <div className="absolute left-0 top-0 h-full w-72 bg-white dark:bg-[#131417] shadow-xl transition-transform">
-            <div className="flex justify-end border-b border-slate-200 dark:border-[#222328] p-2.5">
+          <div className="absolute left-0 top-0 h-full w-72 bg-white dark:bg-dark-sidebar shadow-xl transition-transform">
+            <div className="flex justify-end border-b border-slate-200 dark:border-dark-border p-2.5">
               <button
                 onClick={() => setMobileNavOpen(false)}
-                className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#222328]"
+                className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-dark-surface-hover"
                 aria-label="Close menu"
                 title="Close menu"
               >
@@ -197,10 +207,10 @@ export function AppLayout({ title, subtitle, children }: AppLayoutProps) {
 
       {/* Main area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white/80 dark:border-[#222328] dark:bg-[#131417]/80 backdrop-blur-md px-4 py-3 shadow-sm md:px-8">
+        <header className="flex items-center justify-between border-b border-slate-200 bg-white/80 dark:border-dark-border dark:bg-dark-sidebar/80 backdrop-blur-md px-4 py-3 shadow-sm md:px-8">
           <div className="flex items-center gap-3">
             <button
-              className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#222328] md:hidden"
+              className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-dark-surface-hover md:hidden"
               onClick={() => setMobileNavOpen(true)}
               title="Open menu"
             >
