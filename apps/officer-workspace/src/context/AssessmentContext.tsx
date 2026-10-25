@@ -1,7 +1,36 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { LiveAssessment } from '../types/workspace';
 
-const STORAGE_KEY = 'mara_assessments';
+/**
+ * Versioned persistence key. Bump the version when the persisted shape
+ * changes so stale payloads are discarded instead of mis-hydrated.
+ */
+const STORAGE_KEY = 'mara_assessments:v1';
+
+function loadPersisted(): LiveAssessment[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    // Defensive: only accept an array of objects shaped like LiveAssessment.
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (a): a is LiveAssessment =>
+        typeof a === 'object' && a !== null && typeof a.thread_id === 'string',
+    );
+  } catch {
+    // Corrupted payload (or unavailable storage) — start clean.
+    return [];
+  }
+}
+
+function persist(assessments: LiveAssessment[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(assessments));
+  } catch {
+    // Quota exceeded or storage unavailable — persistence is best-effort.
+  }
+}
 
 interface AssessmentContextType {
   assessments: LiveAssessment[];
@@ -13,17 +42,11 @@ interface AssessmentContextType {
 const AssessmentContext = createContext<AssessmentContextType | undefined>(undefined);
 
 export function AssessmentProvider({ children }: { children: ReactNode }) {
-  const [assessments, setAssessments] = useState<LiveAssessment[]>(() => {
-    try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
-      return saved ? (JSON.parse(saved) as LiveAssessment[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Hydrate once on mount; survives tab close via localStorage.
+  const [assessments, setAssessments] = useState<LiveAssessment[]>(loadPersisted);
 
   useEffect(() => {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(assessments));
+    persist(assessments);
   }, [assessments]);
 
   function addAssessment(assessment: LiveAssessment) {
