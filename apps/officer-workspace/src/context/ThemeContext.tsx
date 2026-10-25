@@ -26,6 +26,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       root.classList.remove('dark');
       root.classList.add('light');
     }
+    // tokens.css keys its palette off data-theme (index.html seeds it from
+    // prefers-color-scheme before paint). Keep both switches in step so the
+    // token layer and the `dark:` utilities never disagree.
+    root.setAttribute('data-theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {
