@@ -3,6 +3,7 @@
 @import 'tailwindcss';
 @import '../../../packages/openhands-ui/tokens.css';
 @import './styles/tokens.css';
+@import './styles/dashboard.css';
 @config "../tailwind.config.ts";
 
 @source "../../../packages/openhands-ui/components";

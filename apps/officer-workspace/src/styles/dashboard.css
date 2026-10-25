@@ -1,0 +1,133 @@
+/* ===== Dashboard KPI card (Adminator pattern) =====
+   Markup: src/components/dashboard/KpiCard.tsx.
+   Colours resolve through the token system so both themes work without
+   dark: variants. c-success / c-danger / c-purple / c-primary variants
+   set `color` (solid token) — glow and icon-soft derive from currentColor
+   and the paired -soft token.
+*/
+
+.kpi-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
+  color: var(--text-primary);
+  overflow: hidden;
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 180ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    border-color 180ms ease;
+}
+
+/* Radial glow, 8% of the card's accent colour (currentColor). */
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 88% -12%,
+    currentColor 0%,
+    transparent 62%
+  );
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+/* Hover lift: -2px, levelled up to the lg shadow. */
+.kpi-card:hover,
+.kpi-card:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-default);
+}
+
+/* Rise-in entrance — 600ms, stagger 60ms per card via inline
+   animation-delay on nth index (set by KpiCard's `index` prop). */
+.kpi-card {
+  animation: kpi-rise-in 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes kpi-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- Accent variants: set currentColor, the glow rides it ---- */
+.kpi-card--primary { color: var(--primary); }
+.kpi-card--success { color: var(--success); }
+.kpi-card--danger { color: var(--danger); }
+.kpi-card--purple { color: var(--purple); }
+
+/* ---- Icon: 32px, soft background from the paired -soft token ---- */
+.kpi-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.kpi-card--primary .kpi-card__icon { background: var(--primary-soft); }
+.kpi-card--success .kpi-card__icon { background: var(--success-soft); }
+.kpi-card--danger .kpi-card__icon { background: var(--danger-soft); }
+.kpi-card--purple .kpi-card__icon { background: var(--purple-soft); }
+
+.kpi-card__icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.9;
+}
+
+/* ---- Body ---- */
+.kpi-card__body {
+  min-width: 0;
+  color: var(--text-primary);
+}
+
+.kpi-card__label {
+  margin: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.kpi-card__value {
+  margin: 6px 0 0;
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.kpi-card__sub {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.kpi-card__empty {
+  color: var(--text-muted);
+}
+
+.kpi-card__empty-note {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
