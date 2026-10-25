@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Chip, Input, Scrollable, Typography } from '@openhands/ui';
 import { AppLayout } from '../components/layout/AppLayout';
 import { useAssessments } from '../context/AssessmentContext';
+import { listOfficerApplications } from '../services/api';
 import type { LiveAssessment } from '../types/workspace';
+import type { V1OfficerQueueItem } from '../services/api';
 
 interface Finding {
   id: string;
@@ -114,10 +116,47 @@ function FindingCard({ finding }: { finding: Finding }) {
   );
 }
 
+type FetchState = 'idle' | 'loading' | 'ok' | 'error';
+
+/** Map a V1OfficerQueueItem to a minimal LiveAssessment for audit findings */
+function queueItemToAssessment(item: V1OfficerQueueItem): LiveAssessment {
+  return {
+    thread_id: item.application_id,
+    title: `${item.applicant_name} — ${item.scheme}`,
+    status: item.status === 'APPROVED' || item.status === 'REJECTED' ? 'completed' : 'pending_approval',
+    pending_gate: null,
+    pending_payload: null,
+    stage_log: [],
+    acted_gate: null,
+    created_at: item.updated_at,
+  };
+}
+
 export function AuditorConsolePage() {
-  const { assessments } = useAssessments();
+  const { assessments: sessionAssessments } = useAssessments();
   const [search, setSearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState<string | null>(null);
+  const [fetchState, setFetchState] = useState<FetchState>('idle');
+  const [apiAssessments, setApiAssessments] = useState<LiveAssessment[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setFetchState('loading');
+    listOfficerApplications()
+      .then((data) => {
+        if (cancelled) return;
+        setApiAssessments(data.items.map(queueItemToAssessment));
+        setFetchState('ok');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFetchState('error');
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Use API data when available; fall back to session on error
+  const assessments = apiAssessments ?? sessionAssessments;
 
   const findings = useMemo(() => deriveFindings(assessments), [assessments]);
 
@@ -144,6 +183,20 @@ export function AuditorConsolePage() {
 
   return (
     <AppLayout title="Auditor Console" subtitle="Cross-workflow review — gaps are findings, never smoothed over">
+      {fetchState === 'error' && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800/60 dark:bg-amber-950/30">
+          <Typography.Text fontSize="s" className="text-amber-700 dark:text-amber-300">
+            API tidak tersedia — menunjukkan data sesi semasa sahaja. Cuba semula kemudian.
+          </Typography.Text>
+        </div>
+      )}
+      {fetchState === 'loading' && (
+        <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-[#222328] dark:bg-[#18191C]">
+          <Typography.Text fontSize="s" className="text-slate-500 dark:text-slate-400">
+            Memuatkan sejarah audit…
+          </Typography.Text>
+        </div>
+      )}
       <div className="mb-6">
         <div className="mb-4 flex items-center gap-3">
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 dark:border-red-800/60 dark:bg-red-950/30">
@@ -195,10 +248,12 @@ export function AuditorConsolePage() {
         </div>
       </div>
 
-      {assessments.length === 0 ? (
+      {fetchState === 'loading' ? null : assessments.length === 0 ? (
         <div className="py-20 text-center">
           <Typography.Text fontSize="m" className="text-gray-400">
-            No assessments to audit. Start one from the Workspace.
+            {fetchState === 'error'
+              ? 'Tiada data sesi. API tidak tersedia — tiada rekod audit dijumpai.'
+              : 'Tiada permohonan dalam senarai audit.'}
           </Typography.Text>
         </div>
       ) : filteredFindings.length === 0 ? (
