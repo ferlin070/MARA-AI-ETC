@@ -26,6 +26,7 @@ export function CaseDetailPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [violationAcknowledged, setViolationAcknowledged] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -86,6 +87,8 @@ export function CaseDetailPage() {
 
   const isFinalised =
     detail?.status === 'APPROVED' || detail?.status === 'REJECTED';
+
+  const hasViolation = detail?.ai_assessment?.recommendation?.has_acknowledged_violation ?? false;
 
   const statusChipColor = (s: string): 'green' | 'red' | 'primaryDark' | 'gray' => {
     if (s === 'APPROVED') return 'green';
@@ -228,10 +231,28 @@ export function CaseDetailPage() {
                 <Typography.Text fontSize="s" fontWeight={600} className="mb-3 block text-slate-900 dark:text-slate-100">
                   Keputusan Pegawai
                 </Typography.Text>
+
+                {/* §10.4 + shared/schemas/recommendation.py: officer must explicitly
+                    acknowledge any hard compliance violation before approving */}
+                {hasViolation && (
+                  <label className="mb-3 flex cursor-pointer items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+                      checked={violationAcknowledged}
+                      onChange={(e) => setViolationAcknowledged(e.target.checked)}
+                    />
+                    <Typography.Text fontSize="xs" className="text-amber-700 dark:text-amber-300">
+                      Saya akui bahawa terdapat pelanggaran pematuhan keras dalam permohonan ini dan
+                      memahami risiko sebelum meluluskan cadangan.
+                    </Typography.Text>
+                  </label>
+                )}
+
                 <div className="flex flex-wrap gap-3">
                   <Button
                     variant="primary"
-                    disabled={actionLoading !== null}
+                    disabled={actionLoading !== null || (hasViolation && !violationAcknowledged)}
                     onClick={() => handleDecision('approve')}
                   >
                     {actionLoading === 'approve' ? 'Menghantar…' : 'Lulus'}

@@ -295,6 +295,14 @@ function AssessmentDetail({
   const [gateError, setGateError] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [showCorrect, setShowCorrect] = useState(false);
+  const [violationAcknowledged, setViolationAcknowledged] = useState(false);
+
+  // Reset acknowledgment when gate changes
+  const isRecommendationGate = assessment.pending_gate === 'recommendation_approval';
+  const gateHasViolation =
+    isRecommendationGate &&
+    (assessment.pending_payload as { has_acknowledged_violation?: boolean } | null)
+      ?.has_acknowledged_violation === true;
   async function handleAction(
     action: 'approve' | 'reject' | 'correct',
     fieldCorrections?: FieldCorrection[],
@@ -462,8 +470,27 @@ function AssessmentDetail({
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="e.g. Figures verified against source documents"
                 />
+                {/* §10.4: violation acknowledgment required before Approve at recommendation gate */}
+                {gateHasViolation && (
+                  <label className="flex cursor-pointer items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 rounded border-amber-400 text-amber-600 focus:ring-amber-500"
+                      checked={violationAcknowledged}
+                      onChange={(e) => setViolationAcknowledged(e.target.checked)}
+                    />
+                    <Typography.Text fontSize="xs" className="text-amber-700 dark:text-amber-300">
+                      I acknowledge a hard compliance violation exists and accept responsibility
+                      for approving under an exception path.
+                    </Typography.Text>
+                  </label>
+                )}
                 <div className="flex gap-3">
-                  <Button variant="primary" onClick={() => handleAction('approve')} disabled={submitting}>
+                  <Button
+                    variant="primary"
+                    onClick={() => handleAction('approve')}
+                    disabled={submitting || (gateHasViolation && !violationAcknowledged)}
+                  >
                     {submitting ? 'Submitting...' : 'Approve'}
                   </Button>
                   <Button variant="secondary" onClick={() => handleAction('reject')} disabled={submitting}>
